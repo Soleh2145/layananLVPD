@@ -23,45 +23,12 @@
       display:flex; justify-content:center; align-items:center;
       height:100vh; text-align:center;
     }
-    .login-card {
+    .card {
       background:rgba(0,0,0,0.75);
       padding:40px; border-radius:15px;
       width:320px; box-shadow:0 10px 25px rgba(0,0,0,0.6);
     }
-    .login-card h1 {margin-bottom:20px;font-size:1.8rem;}
-    .discord-btn {
-      display:inline-block;
-      background:#5865F2; color:white;
-      padding:12px 20px; border-radius:8px;
-      font-weight:bold; text-decoration:none;
-      transition:background 0.3s;
-    }
-    .discord-btn:hover {background:#4752c4;}
-    .dashboard {
-      padding:20px;
-    }
-    .user-info {
-      display:flex; align-items:center;
-      gap:10px; margin-bottom:20px;
-    }
-    .user-info img {
-      width:40px; height:40px;
-      border-radius:50%;
-    }
-    .grid {
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-      gap:20px;
-    }
-    .card {
-      background:rgba(0,0,0,0.6);
-      padding:20px;
-      border-radius:12px;
-      box-shadow:0 6px 15px rgba(0,0,0,0.5);
-      transition:transform .2s;
-    }
-    .card:hover {transform:scale(1.03);}
-    .card h2 {margin-top:0;font-size:1.2rem;}
+    .card h1 {margin-bottom:20px;font-size:1.8rem;}
     input, textarea, button {
       width:100%; padding:10px;
       margin-top:8px; border:none; border-radius:6px;
@@ -71,29 +38,30 @@
       cursor:pointer; transition:background 0.3s;
     }
     button:hover {background:#4752c4;}
+    .dashboard { display:none; padding:20px;}
+    .grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+      gap:20px;
+    }
+    .formService .card {background:rgba(0,0,0,0.6);}
   </style>
 </head>
 <body>
-  <!-- LOGIN -->
-  <div id="loginPage" class="center">
-    <div class="login-card">
-      <h1>Login Layanan LVPD</h1>
-      <p>Masuk dengan akun Discord Anda</p>
-      <a class="discord-btn" 
-         id="discordLogin"
-         href="https://discord.com/oauth2/authorize?client_id=1423706389531856976&redirect_uri=https://layanan-lvpd.vercel.app&response_type=code&scope=identify">
-         Login dengan Discord
-      </a>
+
+  <!-- REGISTER / LOGIN -->
+  <div id="registerPage" class="center">
+    <div class="card">
+      <h1>Daftar / Masuk LVPD</h1>
+      <input type="text" id="username" placeholder="Nama Lengkap" required>
+      <button id="registerBtn">Masuk</button>
     </div>
   </div>
 
   <!-- DASHBOARD -->
-  <div id="dashboard" style="display:none;" class="dashboard">
-    <div class="user-info">
-      <img id="userAvatar" src="" alt="avatar"/>
-      <span id="userName"></span>
-    </div>
-    <h1>Pilih Layanan Kepolisian</h1>
+  <div id="dashboard" class="dashboard">
+    <h1>Selamat datang, <span id="userName"></span>!</h1>
+    <p>Pilih layanan kepolisian:</p>
     <div class="grid">
       <div class="card">
         <h2>Pengajuan SKCK</h2>
@@ -147,27 +115,31 @@
   </div>
 
   <script>
-    // Tangkap token setelah login Discord
-    const hash = window.location.hash;
-    if (hash.includes("access_token")) {
-      const params = new URLSearchParams(hash.replace("#","?"));
-      const token = params.get("access_token");
+    // REGISTER / LOGIN sederhana
+    const registerBtn = document.getElementById("registerBtn");
+    const usernameInput = document.getElementById("username");
 
-      // Ambil data user Discord
-      fetch("https://discord.com/api/users/@me", {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(res => res.json())
-      .then(user => {
-        document.getElementById("loginPage").style.display="none";
-        document.getElementById("dashboard").style.display="block";
-        document.getElementById("userName").innerText = user.username+"#"+user.discriminator;
-        document.getElementById("userAvatar").src =
-          `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`;
-      });
+    registerBtn.addEventListener("click", ()=>{
+      const username = usernameInput.value.trim();
+      if(!username) { alert("Masukkan nama lengkap!"); return; }
+
+      localStorage.setItem("lvpdUser", username); // simpan satu kali
+      showDashboard(username);
+    });
+
+    // cek jika sudah login sebelumnya
+    const savedUser = localStorage.getItem("lvpdUser");
+    if(savedUser){
+      showDashboard(savedUser);
     }
 
-    // Kirim form ke Discord Webhook
+    function showDashboard(username){
+      document.getElementById("userName").innerText = username;
+      document.getElementById("registerPage").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+    }
+
+    // Kirim form ke Discord Webhook (opsional)
     const WEBHOOK_URL = "MASUKKAN_WEBHOOK_DISCORD_KAMU";
     document.querySelectorAll(".formService").forEach(form=>{
       form.addEventListener("submit", e=>{
@@ -178,14 +150,15 @@
 Nama: ${data.get("nama")}
 Keterangan: ${data.get("keterangan")}`
         };
-        fetch(WEBHOOK_URL, {
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify(payload)
-        }).then(()=>{
-          alert("Permohonan berhasil dikirim!");
-          form.reset();
-        });
+        if(WEBHOOK_URL !== "MASUKKAN_WEBHOOK_DISCORD_KAMU"){
+          fetch(WEBHOOK_URL, {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(payload)
+          });
+        }
+        alert(`Layanan ${form.parentElement.querySelector("h2").innerText} berhasil dikirim!`);
+        form.reset();
       });
     });
   </script>
